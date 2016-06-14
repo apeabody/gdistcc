@@ -187,8 +187,8 @@ def delete_instance(project, zone, name):
 
 
 # [START run]
-def main(project, zone, name, qty, function, waitonssh):
-    if function == 'start':
+def main(project, zone, name, qty, mode, skipfullstartup):
+    if mode == 'start':
       print('Creating %s %s instances, this will take a few momments.' % (qty, project))
       if qty > 1:
         ci = functools.partial(create_instance, project, zone, name)
@@ -207,7 +207,7 @@ def main(project, zone, name, qty, function, waitonssh):
       for instance in instances:
           print(' - ' + instance['name'])
           instancenames.append(instance['name'])
-      if waitonssh == True:
+      if skipfullstartup == False:
         print("NOTE: It may take several minutes waiting for the instances to fully setup.")
         if len(instances) > 1:
           cis = functools.partial(check_instance_ssh, project, zone)
@@ -224,7 +224,7 @@ def main(project, zone, name, qty, function, waitonssh):
         print("NOTE: It may take several minutes for the instances to fully setup.")
       print("Complete")
 
-    elif function == 'status':
+    elif mode == 'status':
       instances = list_instances(project, zone)
       if instances:
         print('%s instances in zone %s:' % (project, zone))
@@ -241,7 +241,7 @@ def main(project, zone, name, qty, function, waitonssh):
         print('No %s instances found in zone %s' % (project, zone))
       print("Complete")
 
-    elif function == 'make':
+    elif mode == 'make':
       instances = list_instances(project, zone)
       if instances:
         print('%s instances in zone %s:' % (project, zone))
@@ -260,7 +260,7 @@ def main(project, zone, name, qty, function, waitonssh):
       print("Complete")
 
 
-    elif function == 'stop':
+    elif mode == 'stop':
       print('Deleting instance(s), this may take a few momments.')
       instances = list_instances(project, zone)
       if instances:
@@ -288,7 +288,7 @@ if __name__ == '__main__':
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument(
-        'function', 
+        'mode', 
         help='start: start gdistcc instances | status: check status of gdistcc instances | make: run make on gditcc instances | stop: stop gdistcc instances')
     parser.add_argument(
         '--project',
@@ -304,19 +304,20 @@ if __name__ == '__main__':
         help='Instance name. (default: gdistcc-{automatic})')
     parser.add_argument(
         '--qty', 
+        type=int,
         default=1, 
         help='Qty of Instances to deploy. (default: %(default)s)')
     parser.add_argument(
-        '--waitonssh',
-        dest='waitonssh', action='store_true',
-        help='Wait for ssh startup during start')
-    parser.set_defaults(waitonssh=False)
+        '--skipfullstartup',
+        dest='skipfullstartup', action='store_true',
+        help='Skip waiting for full instance startup during start')
+    parser.set_defaults(skipfullstartup=False)
     parser.add_argument(
         '--version',
         action='version',
-        version='%(prog)s 0.9')
+        version='%(prog)s 0.9-dev')
 
     args = parser.parse_args()
 
-    main(args.project, args.zone, args.name, int(args.qty), args.function, args.waitonssh)
+    main(args.project, args.zone, args.name, args.qty, args.mode, args.skipfullstartup)
 # [END run]

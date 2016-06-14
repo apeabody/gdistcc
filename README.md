@@ -45,11 +45,11 @@ NOTE: If a new kernel is installed, please reboot before continuing.
 ## Using gdistcc
 ```
 usage: gdistcc [-h] [--project PROJECT] [--zone ZONE] [--name NAME]
-               [--qty QTY] [--waitonssh] [--version]
-               function
+               [--qty QTY] [--skipfullstartup] [--version]
+               mode
 
 positional arguments:
-  function           start: start gdistcc instances | status: check status of
+  mode               start: start gdistcc instances | status: check status of
                      gdistcc instances | make: run make on gditcc instances |
                      stop: stop gdistcc instances
 
@@ -59,19 +59,21 @@ optional arguments:
   --zone ZONE        Compute Engine deploy zone. (default: us-central1-c)
   --name NAME        Instance name. (default: gdistcc-{automatic})
   --qty QTY          Qty of Instances to deploy. (default: 1)
-  --waitonssh        Include to Wait for ssh startup during start
+  --skipfullstartup  Skip waiting for full instance startup during start
   --version          show program's version number and exit
+
+Copyright 2016 Andrew Peabody. See README.md for details.
 ```
 
-### gdistcc's primary functions
+### gdistcc's primary modes
 
 #### start
 
 An example that starts (4) gdistcc instances in preparation for a remote compile, and polls till they are fully online and ready.  This normally take a minute or two depending on the speed of the instance, and number of dependencies.
 
-`gdistcc start --qty 4 --waitonssh`
+`gdistcc start --qty 4`
 
-NOTE: `--waitonssh` will probably be the default in a later version.
+NOTE: By default gdistcc will wait for all instances to fully start, this can be skiped with `--skipfullstartup`.  This may be useful if the local machine is fast enough to start the compile in advance of the 1-2minute full startup.
 
 #### status
 
@@ -103,11 +105,12 @@ Host *.gdistcc
         StrictHostKeyChecking no
         UserKnownHostsFile=/dev/null
 ```
+NOTE: Some sources recommend using ssh's ControlMaster to skip later ssh negotiations.  In my testing I have found this causes the shared ssh connections to become laggy/unreliable when transfering files.  It might be useful for nodes doing a single compile at a time - but I think using larger (8-32 core) instances is preferable.
 
 ## Limitations/Warnings
 
 - **Always confirm all instances are shutdown after use - you are solely responsible for their cost.**
-- Gdistcc uses [preememptible instances](https://cloud.google.com/compute/docs/instances/preemptible) which offer preferred pricing, but Google may shutdown on short notice.  Gdistcc does not currently have a way to check if they have been shutdown, however a `gdistcc status --waitonssh` will fail if this is the case.  In the future `gdistcc status` will be able to check if they have been prempted.  In any event, `gdistcc stop` currently can/should be used as normal to shutdown/delete the instances.
+- Gdistcc uses [preememptible instances](https://cloud.google.com/compute/docs/instances/preemptible) which offer preferred pricing, but Google may shutdown on short notice.  Gdistcc does not currently have a way to check if they have been shutdown, however a `gdistcc status` will fail if this is the case.  In the future `gdistcc status` will be able to check if they have been prempted.  In any event, `gdistcc stop` currently can/should be used as normal to shutdown/delete the instances.
 - Gdistcc is currently only officially tested with CentOS 7, however it should be compatible with other RHEL7 derived distros that use [EPEL](https://fedoraproject.org/wiki/EPEL).  Support is planned for Ubutunu long term.
 - Future versions may not require ccache.
 - Only SSH is supported at the transport for distcc.  Distcc's native TCP transport is not enabled due to [security concerns](https://www.cvedetails.com/cve/2004-2687).
