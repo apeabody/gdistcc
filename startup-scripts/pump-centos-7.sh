@@ -19,21 +19,29 @@
 # Disable sshd during setup
 service sshd stop
 
-# Increase max ssh sessions from a single host - FOR LARGE CPU INSTANCES ONLY
-# sed -i -e 's/#MaxSessions 10/MaxSessions 64/' /etc/ssh/sshd_config
-# sed -i -e 's/#MaxStartups 10:30:100/MaxStartups 64:64:100' /etc/ssh/sshd_config
+# Increase max ssh sessions from a single host
+sed -i '%s/#MaxSessions 10/MaxSessions 64/' /etc/ssh/sshd_config
 
-# Suppress distcc from trying to cork ssh connections
-echo "DISTCC_TCP_CORK=0" >> /etc/environment
-
-# Enable EPEL for distcc
-# Enable deltrpm for any required package upgrades
-yum install -y epel-release deltarpm
+# Enable EPEL for distcc and other dependencies
+yum install -y deltarpm epel-release
 
 ###############################################################################
-# Install distcc-server and minimum compilers
-yum install -y distcc-server gcc gcc-objc gcc-c++
+# Install required development packages and distcc
+# yum groupinstall -y "Development Tools"
+
+yum install -y cpp,
+# Install distcc and distcc-server
+yum install -y distcc distcc-server
 ###############################################################################
+
+# Custom example for HHVM compilation
+#yum install cpp gcc-c++ cmake git psmisc {binutils,boost,jemalloc,numactl}-devel \
+#{ImageMagick,sqlite,tbb,bzip2,openldap,readline,elfutils-libelf,gmp,lz4,pcre}-devel \
+#lib{xslt,event,yaml,vpx,png,zip,icu,mcrypt,memcached,cap,dwarf}-devel \
+#{unixODBC,expat,mariadb}-devel lib{edit,curl,xml2,xslt}-devel \
+#glog-devel oniguruma-devel ocaml gperf enca libjpeg-turbo-devel openssl-devel \
+#mariadb mariadb-server {fastlz,double-conversion,re2}-devel make \
+#{fribidi,libc-client,glib2}-devel distcc distcc-server -y
 
 echo "GDISTCC_READY" > /tmp/gdistcc_ready
 

@@ -52,7 +52,7 @@ def create_instance(project, zone, name, number):
     source_disk_image = image_response['selfLink']
 
     # Configure the machine
-    machine_type = "zones/%s/machineTypes/n1-highcpu-8" % zone
+    machine_type = "zones/%s/machineTypes/g1-small" % zone
     startup_script = open(
         os.path.join(
             os.path.dirname(__file__), 'startup-scripts/centos-7.sh'), 'r').read()
@@ -250,9 +250,9 @@ def main(project, zone, name, qty, mode, skipfullstartup):
         for instance in instances:
             print(' - ' + instance['name'])
             cmd += '@' + instance['name'] + '.' + zone + '.' + project + \
-                   '/16,lzo --randomize '
+                   '/1,lzo --randomize '
         # Recommendation is to use 2x for j as actual cores
-        cmd += '" make -j' + str(len(instances)*32)
+        cmd += '" make -j' + str(len(instances)*2)
         #print cmd
         os.system(cmd) 
       else:
