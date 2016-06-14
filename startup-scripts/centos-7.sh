@@ -19,23 +19,22 @@
 # Disable sshd during setup
 service sshd stop
 
-# Increase max ssh sessions from a single host - FOR LARGE CPU INSTANCES ONLY
-# sed -i -e 's/#MaxSessions 10/MaxSessions 64/' /etc/ssh/sshd_config
-# sed -i -e 's/#MaxStartups 10:30:100/MaxStartups 64:64:100' /etc/ssh/sshd_config
+# Increase max ssh sessions from a single host
+sed -i -e 's/#MaxSessions 10/MaxSessions 64/' /etc/ssh/sshd_config
+sed -i -e 's/#MaxStartups 10:30:100/MaxStartups 64:64:100' /etc/ssh/sshd_config
 
 # Suppress distcc from trying to cork ssh connections
 echo "DISTCC_TCP_CORK=0" >> /etc/environment
 
 # Enable EPEL for distcc
-# Enable deltrpm for any required package upgrades
+# Enable deltrpm for any required package upgrades during next step
 yum install -y epel-release deltarpm
 
-###############################################################################
 # Install distcc-server and minimum compilers
 yum install -y distcc-server gcc gcc-objc gcc-c++
-###############################################################################
 
+# Set flag for gdistcc to check
 echo "GDISTCC_READY" > /tmp/gdistcc_ready
 
-# Enable sshd with setup complete
+# Enable sshd
 service sshd start

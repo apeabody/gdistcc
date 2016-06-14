@@ -107,6 +107,7 @@ Host *.gdistcc
         Ciphers aes256-gcm@openssh.com
         StrictHostKeyChecking no
         UserKnownHostsFile=/dev/null
+        LogLevel QUIET
 ```
 NOTE: In some cases I've found the ControlMaster mux to be unreliable with multiple streams of simulantious file transfer, but when using g1-small instances doing a single build I'm hoping this will work and greatly speed up the ssh connection.
 
