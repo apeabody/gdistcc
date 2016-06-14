@@ -40,5 +40,7 @@ glog-devel oniguruma-devel ocaml gperf enca libjpeg-turbo-devel openssl-devel \
 mariadb mariadb-server {fastlz,double-conversion,re2}-devel make \
 {fribidi,libc-client,glib2}-devel distcc distcc-server -y
 
+echo "GDISTCC_READY" > /tmp/gdistcc_ready
+
 # Enable sshd with setup complete
 service sshd start
