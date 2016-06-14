@@ -52,7 +52,7 @@ def create_instance(project, zone, name, number):
     source_disk_image = image_response['selfLink']
 
     # Configure the machine
-    machine_type = "zones/%s/machineTypes/g1-small" % zone
+    machine_type = "zones/%s/machineTypes/n1-highcpu-8" % zone
     startup_script = open(
         os.path.join(
             os.path.dirname(__file__), 'startup-scripts/centos-7.sh'), 'r').read()
@@ -250,9 +250,9 @@ def main(project, zone, name, qty, function, waitonssh):
         for instance in instances:
             print(' - ' + instance['name'])
             cmd += '@' + instance['name'] + '.' + zone + '.' + project + \
-                   '/2,lzo,cpp '
+                   '/8,lzo,cpp '
         # Recommendation is to use 2x for j as actual cores
-        cmd += '" pump make -j' + str(len(instances)*2)
+        cmd += '" pump make -j' + str(len(instances)*16)
         #print cmd
         os.system(cmd) 
       else:
@@ -284,31 +284,32 @@ def main(project, zone, name, qty, function, waitonssh):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         prog='gdistcc',
+        epilog="Copyright 2016 Andrew Peabody. See README.md for details.",
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument(
         'function', 
-        help='start,status,make,stop')
+        help='start: start gdistcc instances | status: check status of gdistcc instances | make: run make on gditcc instances | stop: stop gdistcc instances')
     parser.add_argument(
         '--project',
         default='gdistcc',
-        help='Google Cloud project ID.')
+        help='Google Cloud project ID. (default: %(default)s)')
     parser.add_argument(
         '--zone',
         default='us-central1-c',
-        help='Compute Engine deploy zone.')
+        help='Compute Engine deploy zone. (default: %(default)s)')
     parser.add_argument(
         '--name', 
         default=str('gdistcc-{}').format(str(uuid.uuid4())[:8]), 
-        help='Instance name.')
+        help='Instance name. (default: gdistcc-{automatic})')
     parser.add_argument(
         '--qty', 
         default=1, 
-        help='Qty of Instances to deploy.')
+        help='Qty of Instances to deploy. (default: %(default)s)')
     parser.add_argument(
         '--waitonssh',
         dest='waitonssh', action='store_true',
-        help='Set to True to wait for ssh on startup.')
+        help='Wait for ssh startup during start')
     parser.set_defaults(waitonssh=False)
     parser.add_argument(
         '--version',
