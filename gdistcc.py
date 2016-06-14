@@ -208,7 +208,7 @@ def main(project, zone, name, qty, mode, skipfullstartup):
           print(' - ' + instance['name'])
           instancenames.append(instance['name'])
       if skipfullstartup == False:
-        print("NOTE: It may take several minutes waiting for the instances to fully setup.")
+        print("Waiting for instances to fully startup.")
         if len(instances) > 1:
           cis = functools.partial(check_instance_ssh, project, zone)
           pool = Pool(len(instancenames))
@@ -221,7 +221,7 @@ def main(project, zone, name, qty, mode, skipfullstartup):
           print("Error: No instances found")
           exit(-1)
       else:
-        print("NOTE: It may take several minutes for the instances to fully setup.")
+        print("NOTE: Skipped waiting for instances to fully startup.")
       print("Complete")
 
     elif mode == 'status':
@@ -245,14 +245,14 @@ def main(project, zone, name, qty, mode, skipfullstartup):
       instances = list_instances(project, zone)
       if instances:
         print('%s instances in zone %s:' % (project, zone))
-        cmd = 'gcloud --project ' + project + ' compute config-ssh && '
-        cmd += 'DISTCC_TCP_CORK=0 CCACHE_PREFIX=distcc DISTCC_HOSTS="'
+        cmd = 'gcloud --project ' + project + ' compute config-ssh >/dev/null && '
+        cmd += 'CCACHE_PREFIX=distcc DISTCC_HOSTS="'
         for instance in instances:
             print(' - ' + instance['name'])
             cmd += '@' + instance['name'] + '.' + zone + '.' + project + \
-                   '/8,lzo,cpp '
+                   '/16,lzo --randomize '
         # Recommendation is to use 2x for j as actual cores
-        cmd += '" pump make -j' + str(len(instances)*16)
+        cmd += '" make -j' + str(len(instances)*32)
         #print cmd
         os.system(cmd) 
       else:
