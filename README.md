@@ -115,11 +115,17 @@ NOTE: Some sources recommend using ssh's ControlMaster to skip later ssh negotia
 - Future versions may not require ccache.
 - Only SSH is supported at the transport for distcc.  Distcc's native TCP transport is not enabled due to [security concerns](https://www.cvedetails.com/cve/2004-2687).
 - Currently many options such as the instance types and core counts are hard-coded.  These will eventually be made configurable.
+- Gdistcc does NOT currently use dsitcc's Pump Mode for the following reasons:
+  - Gdistcc is intended for frequent re-compiles, so most header pre-processing will hopefully be cached by ccache anyway - mutally exclusive from pump mode.
+  - Gdistcc uses ssh over the internet for transfers, so minimizing the transfered file size is advantageous. (In a local/HPC setup distcc can be used over TCP for higher transfer speeds.)
+  - Installing the required system headers would slow the instance startup significantly.
+  - While system headers from normal repos are easily added to the start up script, others would require significant customization/setup time.
+  - A `--pumpmode` could/might be added in the future for those so inclined to the above notes.
 
 ## History / License
 Written/Copyright 2016 [Andrew Peabody](https://github.com/apeabody). (apeabody@gmail.com)
 
-Includes [Code](GoogleCloudPlatform/python-docs-samples/compute/api/create_instance.py) Copyright 2015 Google Inc.
+Based on sample code Copyright 2015 Google Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
