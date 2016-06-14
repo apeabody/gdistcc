@@ -101,11 +101,14 @@ It is recommended to add these options to your ssh client to suppress the hostke
 
 ```
 Host *.gdistcc
+        ControlMaster auto
+        ControlPath ~/.ssh/%r@%h:%p
+        ControlPersist 5m
         Ciphers aes256-gcm@openssh.com
         StrictHostKeyChecking no
         UserKnownHostsFile=/dev/null
 ```
-NOTE: Some sources recommend using ssh's ControlMaster to skip later ssh negotiations.  In my testing I have found this causes the shared ssh connections to become laggy/unreliable when transfering files.  It might be useful for nodes doing a single compile at a time - but I think using larger (8-32 core) instances is preferable.
+NOTE: In some cases I've found the ControlMaster mux to be unreliable with multiple streams of simulantious file transfer, but when using g1-small instances doing a single build I'm hoping this will work and greatly speed up the ssh connection.
 
 ## Limitations/Warnings
 
