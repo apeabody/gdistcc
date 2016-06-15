@@ -8,7 +8,7 @@ Gdistcc provides easy access to compiling 'make' based software on Google Comput
 
 Gdistcc has been designed to require minimal dependencies outside of your base distribution and the Google cloud APIs.
 
- - CentOS 7 (Ubuntu coming soon)
+ - CentOS 7 (Ubuntu LTS support coming very soon)
    - python 2.7
    - ccache
    - distcc
@@ -21,26 +21,46 @@ NOTE: Your application MUST currently be using 'make' and configured to use [cca
 ## Setup Instructions
 
 1. Ensure your Linux distro is currently supported, and fully updated.  This is critical to ensure the development toolchain is compatible.  
-CentOS:
-`yum upgrade -y`
-Ubuntu:
-`sudo apt-get update`
-`sudo apt-get dist-upgrade`
-NOTE: If a new kernel is installed, please reboot before continuing.
+
+  CentOS:
+  `yum upgrade -y`
+
+  Ubuntu:
+  `sudo apt-get update && sudo apt-get upgrade`
+
+  NOTE: If a new kernel is installed, please reboot before continuing.
 
 2. Create a "gdistcc" project on the [Google Cloud](https://console.cloud.google.com/)
 3. Install the [Google Cloud SDK](https://cloud.google.com/sdk/)
+
+  CentOS:
+  https://cloud.google.com/sdk/downloads#linux
+
+  Ubuntu:
+  https://cloud.google.com/sdk/downloads#apt-get
+
 4. Authenticate with the Google Cloud
-`gcloud init`
+  `gcloud init`
 
 5. Install the google-api-python-client via your distro or pip.
-`pip install --upgrade google-api-python-client`
 
-6. Clone the gdistcc repo
-`git clone https://github.com/apeabody/gdistcc`
+  CentOS:
+  `pip install --upgrade google-api-python-client`
+
+  Ubuntu:
+  `apt-get install python-googleapi`
+
+6. Clone the gdistcc repo locally
+  `git clone https://github.com/apeabody/gdistcc`
 
 7. Add any development dependency requirements to the appropriate startup-script
-`/startup-scripts/centos-7.sh`
+
+  CentOS 7:
+  `startup-scripts/centos-7.sh`
+
+  Ubuntu 16.04 LTS:
+  `startup-scripts/ubuntu-16.04.sh`
+
 
 ## Using gdistcc
 ```
