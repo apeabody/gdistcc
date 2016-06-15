@@ -53,15 +53,6 @@ NOTE: Your application MUST currently be using 'make' and configured to use [cca
 6. Clone the gdistcc repo locally
   `git clone https://github.com/apeabody/gdistcc`
 
-7. Add any development dependency requirements to the appropriate startup-script
-
-  CentOS 7:
-  `startup-scripts/centos-7.sh`
-
-  Ubuntu 16.04 LTS:
-  `startup-scripts/ubuntu-16.04.sh`
-
-
 ## Using gdistcc
 ```
 usage: gdistcc [-h] [--project PROJECT] [--zone ZONE] [--name NAME]
