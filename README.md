@@ -8,7 +8,7 @@ Gdistcc provides easy access to compiling 'make' based software on Google Comput
 
 Gdistcc has been designed to require minimal dependencies outside of your base distribution and the Google cloud APIs.
 
- - CentOS 7 (Ubuntu LTS support coming very soon)
+ - CentOS 7 / Ubuntu 16.04 LTS
    - python 2.7
    - ccache
    - distcc
@@ -42,6 +42,8 @@ NOTE: Your application MUST currently be using 'make' and configured to use [cca
 4. Authenticate with the Google Cloud
   `gcloud init`
 
+  You CAN choose gdistcc as your default project and us-central-c as the default zone.  But it is NOT mandatory.
+
 5. Install the google-api-python-client via your distro or pip.
 
   CentOS:
@@ -49,6 +51,8 @@ NOTE: Your application MUST currently be using 'make' and configured to use [cca
 
   Ubuntu:
   `apt-get install python-googleapi`
+  
+  NOTE: I had difficulty with the Ubuntu version of Google's oauth2client, so you may need to use the pip method instead.
 
 6. Clone the gdistcc repo locally
   `git clone https://github.com/apeabody/gdistcc`
@@ -85,6 +89,8 @@ An example that starts (4) gdistcc instances in preparation for a remote compile
 `gdistcc start --qty 4`
 
 NOTE: By default gdistcc will wait for all instances to fully start, this can be skiped with `--skipfullstartup`.  This may be useful if the local machine is fast enough to start the compile in advance of the 1-2minute full startup.
+
+NOTE: The first time you use glcoud on this host you may be prompted to enter a passphrase - please enter twice to use no passphrase.
 
 #### status
 
@@ -126,11 +132,11 @@ NOTE: In some cases I've found the ControlMaster mux to be unreliable with multi
 
 - **Always confirm all instances are shutdown after use - you are solely responsible for their cost.**
 - Gdistcc uses [preememptible instances](https://cloud.google.com/compute/docs/instances/preemptible) which offer preferred pricing, but Google may shutdown on short notice.  Gdistcc does not currently have a way to check if they have been shutdown, however a `gdistcc status` will fail if this is the case.  In the future `gdistcc status` will be able to check if they have been prempted.  In any event, `gdistcc stop` currently can/should be used as normal to shutdown/delete the instances.
-- Gdistcc is currently only officially tested with CentOS 7, however it should be compatible with other RHEL7 derived distros that use [EPEL](https://fedoraproject.org/wiki/EPEL).  Support is planned for Ubutunu long term.
+- Gdistcc is currently only officially tested with CentOS 7, however it should be compatible with other RHEL7 derived distros that use [EPEL](https://fedoraproject.org/wiki/EPEL).
 - Future versions may not require ccache.
 - Only SSH is supported at the transport for distcc.  Distcc's native TCP transport is not enabled due to [security concerns](https://www.cvedetails.com/cve/2004-2687).
 - Currently many options such as the instance types and core counts are hard-coded.  These will eventually be made configurable.
-- Gdistcc does NOT currently use dsitcc's Pump Mode for the following reasons:
+- Gdistcc does NOT currently use distcc's Pump Mode for the following reasons:
   - Gdistcc is intended for frequent re-compiles, so most header pre-processing will hopefully be cached by ccache anyway - mutally exclusive from pump mode.
   - Gdistcc uses ssh over the internet for transfers, so minimizing the transfered file size is advantageous. (In a local/HPC setup distcc can be used over TCP for higher transfer speeds.)
   - Installing the required system headers would slow the instance startup significantly.
