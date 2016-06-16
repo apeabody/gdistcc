@@ -48,6 +48,7 @@ def create_instance(project, zone, name, distro, number):
     credentials = GoogleCredentials.get_application_default()
     compute = discovery.build('compute', 'v1', credentials=credentials)
 
+    # convert to dictionary later
     if "centos" in distro:
         compproj = 'centos-cloud'
     elif "ubuntu" in distro:
@@ -235,7 +236,7 @@ def main(project, zone, prefix, qty, mode, skipfullstartup):
     if mode == 'start':
       # Verify no current instances
       instances = list_instances(project, zone)
-      if len(instances) > 0:
+      if instances != False:
         print('ERROR: %s gdistcc instance(s) detected, run \'gdistcc status\' for details' % len(instances))
         exit(-1)
       name = prefix + '-' + distro + '-' + format(str(uuid.getnode())[:8:-1])
