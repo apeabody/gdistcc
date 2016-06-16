@@ -196,8 +196,12 @@ def delete_instance(project, zone, name):
 
 # [START check_distro]
 def check_distro():
-    distro = platform.linux_distribution()[0].split()[0].lower() + '-' + \
-             platform.linux_distribution()[1].split('.')[0]
+    distro = platform.linux_distribution()[0].split()[0].lower()
+    if distro == "centos":
+        distro += '-' + platform.linux_distribution()[1].split('.')[0]
+    elif distro == "ubuntu":
+        # slight hack as ubuntu's distro string doesn't include lts
+        distro += '-' + platform.linux_distribution()[1].replace('.','') + '-lts'
     supportdistro = ['centos-7', 'ubuntu-1604-lts']
     if distro not in supportdistro:
       print('ERROR: %s is not a support distro' % distro)
