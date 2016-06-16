@@ -353,7 +353,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--prefix', 
         default='gdistcc', 
-        help='Instance prefix - generally no reason to change. %(default)s)')
+        help='Instance prefix - generally no reason to change. (default: %(default)s)')
     parser.add_argument(
         '--qty', 
         type=int,

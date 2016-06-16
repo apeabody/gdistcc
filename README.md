@@ -6,9 +6,9 @@ Gdistcc provides easy access to compiling 'make' based software on Google Comput
 
 ## Requirements
 
-Gdistcc has been designed to require minimal dependencies outside of your base distribution and the Google cloud APIs.
+Gdistcc has been designed to require minimal dependencies outside of your base distribution and the Google Cloud APIs.
 
- - CentOS 7 / Ubuntu 16.04 LTS
+ - CentOS 7 _or_ Ubuntu 16.04 LTS
    - python 2.7
    - ccache
    - distcc
@@ -59,7 +59,7 @@ NOTE: Your application MUST currently be using 'make' and configured to use [cca
 
 ## Using gdistcc
 ```
-usage: gdistcc [-h] [--project PROJECT] [--zone ZONE] [--name NAME]
+usage: gdistcc [-h] [--project PROJECT] [--zone ZONE] [--prefix PREFIX]
                [--qty QTY] [--skipfullstartup] [--version]
                mode
 
@@ -72,8 +72,10 @@ optional arguments:
   -h, --help         show this help message and exit
   --project PROJECT  Google Cloud project ID. (default: gdistcc)
   --zone ZONE        Compute Engine deploy zone. (default: us-central1-c)
-  --name NAME        Instance name. (default: gdistcc-{automatic})
-  --qty QTY          Qty of Instances to deploy. (default: 1)
+  --prefix PREFIX    Instance prefix - generally no reason to change. (default:
+                      gdistcc)
+  --qty QTY          Qty of Instances to deploy during start mode. (default:
+                     8)
   --skipfullstartup  Skip waiting for full instance startup during start
   --version          show program's version number and exit
 
