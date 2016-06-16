@@ -25,6 +25,7 @@ import uuid
 import functools
 import sys
 import subprocess
+import platform
 
 from multiprocessing import Pool
 from googleapiclient import discovery
@@ -43,19 +44,27 @@ def list_instances(project, zone):
 
 
 # [START create_instance]
-def create_instance(project, zone, name, number):
+def create_instance(project, zone, name, distro, number):
     credentials = GoogleCredentials.get_application_default()
     compute = discovery.build('compute', 'v1', credentials=credentials)
 
+    if "centos" in distro:
+        compproj = 'centos-cloud'
+    elif "ubuntu" in distro:
+        compproj = 'ubuntu-os-cloud'
+    else:
+        print("ERROR: distro compute image family not found")
+        exit(-1)
+
     image_response = compute.images().getFromFamily(
-        project='centos-cloud', family='centos-7').execute()
+        project=compproj, family=distro).execute()
     source_disk_image = image_response['selfLink']
 
     # Configure the machine
     machine_type = "zones/%s/machineTypes/g1-small" % zone
     startup_script = open(
         os.path.join(
-            os.path.dirname(__file__), 'startup-scripts/centos-7.sh'), 'r').read()
+            os.path.dirname(__file__), 'startup-scripts/%s.sh' % distro), 'r').read()
 
     config = {
         'name': name + "-" + str(number),
@@ -112,7 +121,7 @@ def create_instance(project, zone, name, number):
         zone=zone,
         body=config).execute()
 
-    # Wait for confirmation that the instance is done
+    # Wait for confirmation that the instance is created
     while True:
         result = compute.zoneOperations().get(
             project=project,
@@ -185,19 +194,57 @@ def delete_instance(project, zone, name):
         time.sleep(1)
 # [END delete_instance]
 
+# [START check_distro]
+def check_distro():
+    distro = platform.linux_distribution()[0].split()[0].lower() + '-' + \
+             platform.linux_distribution()[1].split('.')[0]
+    supportdistro = ['centos-7', 'ubuntu-1604-lts']
+    if distro not in supportdistro:
+      print('ERROR: %s is not a support distro' % distro)
+      exit(-1)
+    return distro
+# [END check_distro]
+
+# [START check_gcc]
+def check_gcc():
+    gccversion = subprocess.check_output(["gcc", "--version"]).split("\n")[0]
+    if "gcc" in gccversion:
+      gccversion = gccversion.strip()
+    else:
+      print('ERROR: local distcc version not detected')
+      exit(-1)
+    return gccversion
+# [END check_gcc]
 
 # [START run]
-def main(project, zone, name, qty, mode, skipfullstartup):
+def main(project, zone, prefix, qty, mode, skipfullstartup):
+
+    # Check the local distro version
+    distro = check_distro()
+
+    # Check the local gcc version
+    gcc = check_gcc()
+
+    # Check local distcc is present
+    # subprocess.check_call(["distcc", "--version"])
+
     if mode == 'start':
+      # Verify no current instances
+      instances = list_instances(project, zone)
+      if len(instances) > 0:
+        print('ERROR: %s gdistcc instance(s) detected, run \'gdistcc status\' for details' % len(instances))
+        exit(-1)
+      name = prefix + '-' + distro + '-' + format(str(uuid.getnode())[:8:-1])
       print('Creating %s %s instances, this will take a few momments.' % (qty, project))
+      ci = functools.partial(create_instance, project, zone, name, distro)
       if qty > 1:
-        ci = functools.partial(create_instance, project, zone, name)
         pool = Pool(qty)
         pool.map(ci, xrange(qty))
         pool.close()
         pool.join()
+      # useful during testing to avoid map
       elif qty == 1:
-        create_instance(project, zone, name, 1)
+        ci('0')
       else:
         print("Error: Qty not valid")
         exit(-1)
@@ -299,14 +346,14 @@ if __name__ == '__main__':
         default='us-central1-c',
         help='Compute Engine deploy zone. (default: %(default)s)')
     parser.add_argument(
-        '--name', 
-        default=str('gdistcc-{}').format(str(uuid.uuid4())[:8]), 
-        help='Instance name. (default: gdistcc-{automatic})')
+        '--prefix', 
+        default='gdistcc', 
+        help='Instance prefix - generally no reason to change. %(default)s)')
     parser.add_argument(
         '--qty', 
         type=int,
-        default=1, 
-        help='Qty of Instances to deploy. (default: %(default)s)')
+        default=8, 
+        help='Qty of Instances to deploy during start mode. (default: %(default)s)')
     parser.add_argument(
         '--skipfullstartup',
         dest='skipfullstartup', action='store_true',
@@ -319,5 +366,10 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    main(args.project, args.zone, args.name, args.qty, args.mode, args.skipfullstartup)
+    # Sanity check for qty - limited to 8 during testing
+    if 0 > args.qty or args.qty > 8:
+        print("ERROR: Invalid qty: %s" % args.qty)
+        exit(-1)
+
+    main(args.project, args.zone, args.prefix, args.qty, args.mode, args.skipfullstartup)
 # [END run]
