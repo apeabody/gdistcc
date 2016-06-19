@@ -1,2 +1,4 @@
+six
+oauth2client
 google-api-python-client
 codeclimate-test-reporter
