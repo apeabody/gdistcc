@@ -2,6 +2,6 @@ language: python
 python:
   - "2.7"
 # command to install dependencies
-install: "pip install -r google-api-python-client"
+# install: "pip install -r google-api-python-client"
 # # command to run tests
 script: gdistcc.py --help
