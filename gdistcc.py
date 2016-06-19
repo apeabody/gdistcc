@@ -50,12 +50,10 @@ def check_gceproject(distro):
       distros = json.load(distros_file)['distros']
 
     for distrol in distros:
-      print distro
       if distrol['name'] == distro:
         return distrol['gceproject']
-      else:
-        print("ERROR: distro compute image family not found")
-        exit(-1)
+    print("ERROR: distro compute image family not found")
+    exit(-1)
 # [END check_gceproject]
 
 
