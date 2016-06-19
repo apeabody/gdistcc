@@ -33,9 +33,34 @@ from googleapiclient import discovery
 from oauth2client.client import GoogleCredentials
 from six.moves import input
 
+# [START wait_operation]
+def wait_operation(operation):
+
+    # NOT thread safe
+    credentials = GoogleCredentials.get_application_default()
+    compute = discovery.build('compute', 'v1', credentials=credentials)
+
+    # Wait for confirmation that the instance is created
+    while True:
+        result = compute.zoneOperations().get(
+            project=project,
+            zone=zone,
+            operation=operation['name']).execute()
+
+        if result['status'] == 'DONE':
+            return False if ('error' in result) else True
+
+        sys.stdout.write(".")
+        sys.stdout.flush()
+
+        time.sleep(2)
+# [END wait_operation]
+
 
 # [START list_instances]
 def list_instances(project, zone):
+
+    # NOT thread safe
     credentials = GoogleCredentials.get_application_default()
     compute = discovery.build('compute', 'v1', credentials=credentials)
 
@@ -70,25 +95,18 @@ def check_gceproject(distro):
 
 
 # [START create_instance]
-def create_instance(project, zone, name, distro, number):
+def create_instance(project, zone, name, source_disk_image, mtype, number):
+
+    # Unfortunatly this is NOT thread safe
     credentials = GoogleCredentials.get_application_default()
     compute = discovery.build('compute', 'v1', credentials=credentials)
 
-    compproj = check_gceproject(distro)
-
-    with open(settingsFile) as distros_file:
-      settings = json.load(distros_file)['settings']
-
-    image_response = compute.images().getFromFamily(
-        project=compproj, family=distro).execute()
-    source_disk_image = image_response['selfLink']
-
     # Configure the machine
-    machine_type = "zones/%s/machineTypes/%s" % (zone, settings['mtype'])
+    machine_type = "zones/%s/machineTypes/%s" % (zone, mtype)
     startup_script = open(
         os.path.join(
             os.path.dirname(__file__), 'startup-scripts/%s.sh' % distro), 'r').read()
-
+ 
     config = {
         'name': name + "-" + str(number),
         'machineType': machine_type,
@@ -137,35 +155,19 @@ def create_instance(project, zone, name, distro, number):
             }]
         }
     }
-    
+ 
     # Create the instance
     operation = compute.instances().insert(
         project=project,
         zone=zone,
         body=config).execute()
 
-    # Wait for confirmation that the instance is created
-    while True:
-        result = compute.zoneOperations().get(
-            project=project,
-            zone=zone,
-            operation=operation['name']).execute()
-
-        if result['status'] == 'DONE':
-            return False if ('error' in result) else True
-
-        sys.stdout.write(".")
-        sys.stdout.flush()
-
-        time.sleep(2)
+    return wait_operation(operation)
 # [END create_instance]
 
 
 # [START check_instance]
 def check_instance_ssh(project, zone, name):
-    credentials = GoogleCredentials.get_application_default()
-    compute = discovery.build('compute', 'v1', credentials=credentials)
-
     # Wait for confirmation that the instance is done
     for i in xrange(40):
         
@@ -180,7 +182,7 @@ def check_instance_ssh(project, zone, name):
         result = subprocess.check_output(cicmd, shell=True, stderr=open(os.devnull, 'w'))
                 
         if "GDISTCC_READY" in result:
-            print('\n - ' + name + ' - ready')
+            print('\r - ' + name + ' - ready')
             return True 
 
         time.sleep(10)
@@ -192,6 +194,7 @@ def check_instance_ssh(project, zone, name):
 
 # [START delete_instance]
 def delete_instance(project, zone, name):
+    # NOT thread safe
     credentials = GoogleCredentials.get_application_default()
     compute = discovery.build('compute', 'v1', credentials=credentials)
 
@@ -201,20 +204,7 @@ def delete_instance(project, zone, name):
         zone=zone,
         instance=name).execute()
 
-    # Wait for confirmation that the instance is done
-    while True:
-        result = compute.zoneOperations().get(
-            project=project,
-            zone=zone,
-            operation=operation['name']).execute()
-
-        if result['status'] == 'DONE':
-            return False if ('error' in result) else True
-
-        sys.stdout.write(".")
-        sys.stdout.flush()
-
-        time.sleep(1)
+    return wait_operation(operation)
 # [END delete_instance]
 
 
@@ -267,6 +257,10 @@ def main(qty, mode, skipfullstartup):
     global prefix
     prefix = settings['prefix']
 
+    # NOT thread safe
+    credentials = GoogleCredentials.get_application_default()
+    compute = discovery.build('compute', 'v1', credentials=credentials)
+
     if mode == 'start':
       # Verify no current instances
       instances = list_instances(project, zone)
@@ -274,40 +268,28 @@ def main(qty, mode, skipfullstartup):
         print('ERROR: %s gdistcc instance(s) detected, run \'gdistcc status\' for details' % len(instances))
         exit(-1)
       name = prefix + '-' + distro + '-' + format(str(uuid.getnode())[:8:-1])
+
+      with open(settingsFile) as distros_file:
+        mtype = json.load(distros_file)['settings']['mtype']
+      image_response = compute.images().getFromFamily(
+          project=check_gceproject(distro), family=distro).execute()
+      source_disk_image = image_response['selfLink']
+
       print('Creating %s %s instances, this will take a few momments.' % (qty, project))
-      ci = functools.partial(create_instance, project, zone, name, distro)
+      ci = functools.partial(create_instance, project, zone, name, source_disk_image, mtype)
       if qty > 1:
         pool = Pool(qty)
         pool.map(ci, xrange(qty))
         pool.close()
         pool.join()
+        print('\n')
       # useful during testing to avoid map
       elif qty == 1:
         ci('0')
-      else:
-        print("Error: Qty not valid")
-        exit(-1)
-      instancenames = list_instances(project, zone)
-      if skipfullstartup == False:
-        print("Waiting for instances to fully startup.")
-        if len(instances) > 1:
-          cis = functools.partial(check_instance_ssh, project, zone)
-          pool = Pool(len(instancenames))
-          pool.map(cis, instancenames)
-          pool.close()
-          pool.join()
-        elif len(instances) == 1:
-          check_instance_ssh(project, zone, instancenames.pop())
-        else:
-          print("Error: No instances found")
-          exit(-1)
-      else:
-        print("NOTE: Skipped waiting for instances to fully startup.")
-      print("Complete")
 
-    elif mode == 'status':
+    if mode == 'status' or mode == 'start':
       instancenames = list_instances(project, zone)
-      if instancenames != False:
+      if instancenames != False and skipfullstartup == False:
         cis = functools.partial(check_instance_ssh, project, zone)
         pool = Pool(len(instancenames))
         pool.map(cis, instancenames)
@@ -328,14 +310,14 @@ def main(qty, mode, skipfullstartup):
         # Randomize the order we use the instances
         cmd += '--randomize" '
         # Recommendation is to use 2x for j as actual cores
-        cmd += 'make -j' + str(len(instancenames)*settings['mthreads']*2)
+        cmd += 'make -j' + str(len(instancenames)*int(settings['mthreads'])*2)
         os.system(cmd) 
       else:
         print('No %s instances found in zone %s' % (project, zone))
       print("Complete")
 
 
-    elif mode == 'stop':
+    if mode == 'stop':
       print('Deleting instance(s), this may take a few momments.')
       instancenames = list_instances(project, zone)
       if instancenames != False:
@@ -348,8 +330,6 @@ def main(qty, mode, skipfullstartup):
         print('No %s instances found in zone %s' % (project, zone))
       print('\n' + "Complete")
 
-    else:
-      print('Command not found, use one of: start, satus, make, stop')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -359,10 +339,10 @@ if __name__ == '__main__':
         formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument(
         'mode', 
-        help='start: start gdistcc instances | status: check status of gdistcc instances | make: run make on gditcc instances | stop: stop gdistcc instances')
+        choices=['start','status','make','stop'])
     parser.add_argument(
         '--settingsfile',
-        default='./settings.json',
+        default=os.path.dirname(os.path.realpath(__file__)) + '/settings.json',
         help='Custom settings file. (default: %(default)s)')
     parser.add_argument(
         '--qty', 

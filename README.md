@@ -72,22 +72,21 @@ NOTE: Your application MUST currently be using 'make' and configured to use [cca
 
 ## Using gdistcc
 
-Gdistcc is designed to be stateless, however there is a minimal configuraiton file to customize the project, zone, and prefix if needed.
+Gdistcc is designed to be stateless, however there is a minimal config file to customize the project, zone, and prefix if needed.
 
 ```
 usage: gdistcc [-h] [--settingsfile SETTINGSFILE] [--qty QTY]
                [--skipfullstartup] [--globalinstances] [--version]
-               mode
+               {start,status,make,stop}
 
 positional arguments:
-  mode                  start: start gdistcc instances | status: check status
-                        of gdistcc instances | make: run make on gditcc
-                        instances | stop: stop gdistcc instances
+  {start,status,make,stop}
 
 optional arguments:
   -h, --help            show this help message and exit
   --settingsfile SETTINGSFILE
-                        Custom settings file. (default: ./settings.json)
+                        Custom settings file. (default:
+                        ./settings.json)
   --qty QTY             Qty of Instances to deploy during start mode.
                         (default: 8)
   --skipfullstartup     Skip waiting for full instance startup during start
