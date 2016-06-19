@@ -1,0 +1,24 @@
+{
+  "distros": 
+    [
+      {
+        "name": "centos-7",
+        "gceproject": "centos-cloud",
+        "pydistro": "CentOS Linux",
+        "pyversion": "7.2"
+      },
+      {
+        "name": "ubuntu-1604-lts",
+        "gceproject": "ubuntu-os-cloud",
+        "pydistro": "Ubuntu",
+        "pyversion": "16.04"
+      }
+    ],
+  "settings": {
+    "mtype": "g1-small",
+    "mthreads": "1",
+    "project": "gdistcc",
+    "zone": "us-central1-c",
+    "prefix": "gdistcc"
+  }
+}

@@ -58,26 +58,27 @@ NOTE: Your application MUST currently be using 'make' and configured to use [cca
   `git clone https://github.com/apeabody/gdistcc`
 
 ## Using gdistcc
+
+Gdistcc is designed to be stateless, however there is a minimal configuraiton file to customize the project, zone, and prefix if needed.
+
 ```
-usage: gdistcc [-h] [--project PROJECT] [--zone ZONE] [--prefix PREFIX]
-               [--qty QTY] [--skipfullstartup] [--version]
+usage: gdistcc [-h] [--settingsfile SETTINGSFILE] [--qty QTY]
+               [--skipfullstartup] [--version]
                mode
 
 positional arguments:
-  mode               start: start gdistcc instances | status: check status of
-                     gdistcc instances | make: run make on gditcc instances |
-                     stop: stop gdistcc instances
+  mode                  start: start gdistcc instances | status: check status
+                        of gdistcc instances | make: run make on gditcc
+                        instances | stop: stop gdistcc instances
 
 optional arguments:
-  -h, --help         show this help message and exit
-  --project PROJECT  Google Cloud project ID. (default: gdistcc)
-  --zone ZONE        Compute Engine deploy zone. (default: us-central1-c)
-  --prefix PREFIX    Instance prefix - generally no reason to change. (default:
-                      gdistcc)
-  --qty QTY          Qty of Instances to deploy during start mode. (default:
-                     8)
-  --skipfullstartup  Skip waiting for full instance startup during start
-  --version          show program's version number and exit
+  -h, --help            show this help message and exit
+  --settingsfile SETTINGSFILE
+                        Custom settings file. (default: ./settings.json)
+  --qty QTY             Qty of Instances to deploy during start mode.
+                        (default: 8)
+  --skipfullstartup     Skip waiting for full instance startup during start
+  --version             show program's version number and exit
 
 Copyright 2016 Andrew Peabody. See README.md for details.
 ```

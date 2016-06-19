@@ -26,6 +26,7 @@ import functools
 import sys
 import subprocess
 import platform
+import json
 
 from multiprocessing import Pool
 from googleapiclient import discovery
@@ -43,26 +44,37 @@ def list_instances(project, zone):
 # [END list_instances]
 
 
+# [START check_gceproject]
+def check_gceproject(distro):
+    with open(settingsFile) as distros_file:
+      distros = json.load(distros_file)['distros']
+
+    for distrol in distros:
+      print distro
+      if distrol['name'] == distro:
+        return distrol['gceproject']
+      else:
+        print("ERROR: distro compute image family not found")
+        exit(-1)
+# [END check_gceproject]
+
+
 # [START create_instance]
 def create_instance(project, zone, name, distro, number):
     credentials = GoogleCredentials.get_application_default()
     compute = discovery.build('compute', 'v1', credentials=credentials)
 
-    # convert to dictionary later
-    if "centos" in distro:
-        compproj = 'centos-cloud'
-    elif "ubuntu" in distro:
-        compproj = 'ubuntu-os-cloud'
-    else:
-        print("ERROR: distro compute image family not found")
-        exit(-1)
+    compproj = check_gceproject(distro)
+
+    with open(settingsFile) as distros_file:
+      settings = json.load(distros_file)['settings']
 
     image_response = compute.images().getFromFamily(
         project=compproj, family=distro).execute()
     source_disk_image = image_response['selfLink']
 
     # Configure the machine
-    machine_type = "zones/%s/machineTypes/g1-small" % zone
+    machine_type = "zones/%s/machineTypes/%s" % (zone, settings['mtype'])
     startup_script = open(
         os.path.join(
             os.path.dirname(__file__), 'startup-scripts/%s.sh' % distro), 'r').read()
@@ -195,20 +207,26 @@ def delete_instance(project, zone, name):
         time.sleep(1)
 # [END delete_instance]
 
+
 # [START check_distro]
 def check_distro():
-    distro = platform.linux_distribution()[0].split()[0].lower()
-    if distro == "centos":
-        distro += '-' + platform.linux_distribution()[1].split('.')[0]
-    elif distro == "ubuntu":
-        # slight hack as ubuntu's distro string doesn't include lts
-        distro += '-' + platform.linux_distribution()[1].replace('.','') + '-lts'
-    supportdistro = ['centos-7', 'ubuntu-1604-lts']
-    if distro not in supportdistro:
-      print('ERROR: %s is not a support distro' % distro)
-      exit(-1)
-    return distro
+
+    with open(settingsFile) as distros_file:
+      distros = json.load(distros_file)['distros']
+
+    pydistro = platform.linux_distribution()[0]
+    pyversion = platform.linux_distribution()[1].split('.')
+    pyversion = pyversion[0] + '.' + pyversion[1]
+
+    for distrol in distros:
+      if distrol['pydistro'] == pydistro and distrol['pyversion'] == pyversion:
+        return distrol['name']
+        print distro
+
+    print('ERROR: supported distro not detected')
+    exit(-1)
 # [END check_distro]
+
 
 # [START check_gcc]
 def check_gcc():
@@ -221,17 +239,20 @@ def check_gcc():
     return gccversion
 # [END check_gcc]
 
+
 # [START run]
-def main(project, zone, prefix, qty, mode, skipfullstartup):
+def main(qty, mode, skipfullstartup):
 
     # Check the local distro version
     distro = check_distro()
 
-    # Check the local gcc version
+    # Load settings
     gcc = check_gcc()
-
-    # Check local distcc is present
-    # subprocess.check_call(["distcc", "--version"])
+    with open(settingsFile) as distros_file:
+      settings = json.load(distros_file)['settings']
+    project = settings['project']
+    zone = settings['zone']
+    prefix = settings['prefix']
 
     if mode == 'start':
       # Verify no current instances
@@ -302,9 +323,9 @@ def main(project, zone, prefix, qty, mode, skipfullstartup):
         for instance in instances:
             print(' - ' + instance['name'])
             cmd += '@' + instance['name'] + '.' + zone + '.' + project + \
-                   '/1,lzo --randomize '
+                   '/' + settings['mthreads']  + ',lzo --randomize '
         # Recommendation is to use 2x for j as actual cores
-        cmd += '" make -j' + str(len(instances)*2)
+        cmd += '" make -j' + str(len(instances)*settings['mthreads']*2)
         #print cmd
         os.system(cmd) 
       else:
@@ -343,17 +364,9 @@ if __name__ == '__main__':
         'mode', 
         help='start: start gdistcc instances | status: check status of gdistcc instances | make: run make on gditcc instances | stop: stop gdistcc instances')
     parser.add_argument(
-        '--project',
-        default='gdistcc',
-        help='Google Cloud project ID. (default: %(default)s)')
-    parser.add_argument(
-        '--zone',
-        default='us-central1-c',
-        help='Compute Engine deploy zone. (default: %(default)s)')
-    parser.add_argument(
-        '--prefix', 
-        default='gdistcc', 
-        help='Instance prefix - generally no reason to change. (default: %(default)s)')
+        '--settingsfile',
+        default='./settings.json',
+        help='Custom settings file. (default: %(default)s)')
     parser.add_argument(
         '--qty', 
         type=int,
@@ -371,10 +384,14 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    # Set the settings file location globally
+    global settingFile 
+    settingsFile = args.settingsfile
+
     # Sanity check for qty - limited to 8 during testing
     if 0 > args.qty or args.qty > 8:
         print("ERROR: Invalid qty: %s" % args.qty)
         exit(-1)
 
-    main(args.project, args.zone, args.prefix, args.qty, args.mode, args.skipfullstartup)
+    main(args.qty, args.mode, args.skipfullstartup)
 # [END run]
