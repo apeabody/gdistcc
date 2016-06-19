@@ -48,8 +48,9 @@ def list_instances(project, zone):
             name += '-' + format(str(uuid.getnode())[:8:-1])
         for instance in result['items']:
             if name in instance['name']:
-                print(' - ' + instance['name'])
-                instancenames.append(instance['name'])
+                print(' - ' + instance['name'] + ' - ' + instance['status'])
+                if (instance['status'] == 'RUNNING'): 
+                    instancenames.append(instance['name'])
         return instancenames if (len(instancenames) > 0) else False
     return False
 # [END list_instances]
@@ -168,20 +169,20 @@ def check_instance_ssh(project, zone, name):
     # Wait for confirmation that the instance is done
     for i in xrange(40):
         
-        cmd = 'gcloud compute ssh ' + name + \
+        sys.stdout.write(".")
+        sys.stdout.flush()
+
+        cicmd = 'gcloud compute ssh ' + name + \
                ' --zone ' + zone + \
                ' --project ' + project + \
                ' --command "cat /tmp/gdistcc_ready" | grep GDISTCC_READY || true'
 
-        result = subprocess.check_output(cmd, shell=True, stderr=open(os.devnull, 'w'))
+        result = subprocess.check_output(cicmd, shell=True, stderr=open(os.devnull, 'w'))
                 
         if "GDISTCC_READY" in result:
             print('\n - ' + name + ' - ready')
             return True 
 
-        sys.stdout.write(".")
-        sys.stdout.flush()
-   
         time.sleep(10)
      
     print('WARNING: ' + name + ' did not complete setup in a reasonable time.')
@@ -345,7 +346,7 @@ def main(qty, mode, skipfullstartup):
         pool.join()
       else:
         print('No %s instances found in zone %s' % (project, zone))
-      print("Complete")
+      print('\n' + "Complete")
 
     else:
       print('Command not found, use one of: start, satus, make, stop')

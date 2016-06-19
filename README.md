@@ -24,8 +24,8 @@ Gdistcc has been designed to require minimal dependencies outside of your base d
    - distcc
    - git
 
- - [Google Cloud SDK](https://cloud.google.com/sdk/)
- - google-api-python-client
+ - [Google Cloud SDK](https://cloud.google.com/sdk/) (Instructions Below)
+ - google-api-python-client (Instructions Below)
 
 NOTE: Your application MUST currently be using 'make' and configured to use [ccache](https://ccache.samba.org/).  Learn more about ccache [here](http://blog.andrewpeabody.com/2016/06/faster-re-compiling.html).
 
@@ -149,7 +149,7 @@ NOTE: In some cases I've found the ControlMaster mux to be unreliable with multi
 ## Limitations/Warnings
 
 - **Always confirm all instances are shutdown after use - you are solely responsible for their cost.**
-- Gdistcc uses [preememptible instances](https://cloud.google.com/compute/docs/instances/preemptible) which offer preferred pricing, but Google may shutdown on short notice.  Gdistcc does not currently have a way to check if they have been shutdown, however a `gdistcc status` will fail if this is the case.  In the future `gdistcc status` will be able to check if they have been prempted.  In any event, `gdistcc stop` currently can/should be used as normal to shutdown/delete the instances.  One "advantage" of preemptible instances is they won't run more than 24hr, reducing the risk of forgotten instances.
+- Gdistcc uses [preememptible instances](https://cloud.google.com/compute/docs/instances/preemptible) which offer preferred pricing, but Google may shutdown on short notice.  A `gdistcc status` and fresh `gdistcc make` will check (and avoid using) an instance that has been preemempted, `gdistcc stop` will delete a terminated instance as normal.  One "advantage" of preemptible instances is they won't run more than 24hr, reducing the risk of forgotten instances.
 - Future versions may not require ccache.
 - Only SSH is supported at the transport for distcc.  Distcc's native TCP transport is not enabled due to [security concerns](https://www.cvedetails.com/cve/2004-2687).
 - Gdistcc does NOT currently use distcc's Pump Mode for the following reasons:
