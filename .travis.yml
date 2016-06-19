@@ -4,4 +4,4 @@ python:
 # command to install dependencies
 # install: "pip install -r google-api-python-client"
 # # command to run tests
-script: gdistcc.py --help
+script: python gdistcc.py --help
