@@ -47,7 +47,6 @@ def list_instances(project, zone):
         if not globalinstances:
             name += '-' + format(str(uuid.getnode())[:8:-1])
         for instance in result['items']:
-            print name + ' ' + instance['name']
             if name in instance['name']:
                 print(' - ' + instance['name'])
                 instancenames.append(instance['name'])
@@ -318,18 +317,17 @@ def main(qty, mode, skipfullstartup):
       print("Complete")
 
     elif mode == 'make':
-      instances = list_instances(project, zone)
+      instancenames = list_instances(project, zone)
       if instancenames != False:
-        print('%s instances in zone %s:' % (project, zone))
-        cmd = 'gcloud --project ' + project + ' compute config-ssh >/dev/null && '
+        cmd = 'gcloud --project ' + project + ' compute config-ssh &>/dev/null && '
         cmd += 'CCACHE_PREFIX=distcc DISTCC_HOSTS="'
         for instancename in instancenames:
-            print(' - ' + instance)
-            cmd += '@' + instance + '.' + zone + '.' + project + \
-                   '/' + settings['mthreads']  + ',lzo --randomize '
+            cmd += '@' + instancename + '.' + zone + '.' + project + \
+                   '/' + settings['mthreads']  + ',lzo '
+        # Randomize the order we use the instances
+        cmd += '--randomize" '
         # Recommendation is to use 2x for j as actual cores
-        cmd += '" make -j' + str(len(instancenames)*settings['mthreads']*2)
-        #print cmd
+        cmd += 'make -j' + str(len(instancenames)*settings['mthreads']*2)
         os.system(cmd) 
       else:
         print('No %s instances found in zone %s' % (project, zone))
