@@ -12,6 +12,18 @@
         "gceproject": "ubuntu-os-cloud",
         "pydistro": "Ubuntu",
         "pyversion": "16.04"
+      },
+      {
+        "name": "debian-8",
+        "gceproject": "debian-cloud",
+        "pydistro": "debian",
+        "pyversion": "8.5"
+      },
+      {
+        "name": "ubuntu-1404-lts",
+        "gceproject": "ubuntu-os-cloud",
+        "pydistro": "Ubuntu",
+        "pyversion": "14.04"
       }
     ],
   "settings": {
