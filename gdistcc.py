@@ -219,7 +219,6 @@ def check_distro():
     for distrol in distros:
       if distrol['pydistro'] == pydistro and distrol['pyversion'] == pyversion:
         return distrol['name']
-        print distro
 
     print('ERROR: supported distro not detected')
     exit(-1)
