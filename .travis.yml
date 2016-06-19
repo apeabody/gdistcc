@@ -6,3 +6,7 @@ python:
 # install: "pip install -r google-api-python-client"
 # # command to run tests
 script: python gdistcc.py --help
+
+addons:
+    code_climate:
+        repo_token: 10563034adf613b8fbc58e6ca8427167d2f00e4ddbb7b00b1677d75d28d46d7a
