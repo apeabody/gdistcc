@@ -1,4 +1,6 @@
-# gdistcc
+# gdistcc 
+
+[![Build Status](https://travis-ci.org/apeabody/gdistcc.svg?branch=master)](https://travis-ci.org/apeabody/gdistcc)
 
 Gdistcc provides easy access to compiling 'make' based software on Google Compute Engine via [distcc](https://github.com/distcc/distcc) with local caching via [ccache](https://ccache.samba.org/).  The inclusion of ccache provides a local cache of compiled objects, to prevent costly repeat compilation.
 
