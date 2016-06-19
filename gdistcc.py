@@ -40,7 +40,19 @@ def list_instances(project, zone):
     compute = discovery.build('compute', 'v1', credentials=credentials)
 
     result = compute.instances().list(project=project, zone=zone).execute()
-    return result['items'] if ('items' in result) else False
+    if ('items' in result):
+        print('%s instances in zone %s:' % (project, zone))
+        instancenames = []
+        name = prefix + '-' + distro
+        if not globalinstances:
+            name += '-' + format(str(uuid.getnode())[:8:-1])
+        for instance in result['items']:
+            print name + ' ' + instance['name']
+            if name in instance['name']:
+                print(' - ' + instance['name'])
+                instancenames.append(instance['name'])
+        return instancenames if (len(instancenames) > 0) else False
+    return False
 # [END list_instances]
 
 
@@ -241,14 +253,18 @@ def check_gcc():
 def main(qty, mode, skipfullstartup):
 
     # Check the local distro version
+    global distro
     distro = check_distro()
 
-    # Load settings
+    # Load settings - move to function later
     gcc = check_gcc()
     with open(settingsFile) as distros_file:
       settings = json.load(distros_file)['settings']
+    global project
     project = settings['project']
+    global zone
     zone = settings['zone']
+    global prefix
     prefix = settings['prefix']
 
     if mode == 'start':
@@ -271,12 +287,7 @@ def main(qty, mode, skipfullstartup):
       else:
         print("Error: Qty not valid")
         exit(-1)
-      instances = list_instances(project, zone)
-      print('%s instances in zone %s:' % (project, zone))
-      instancenames = []
-      for instance in instances:
-          print(' - ' + instance['name'])
-          instancenames.append(instance['name'])
+      instancenames = list_instances(project, zone)
       if skipfullstartup == False:
         print("Waiting for instances to fully startup.")
         if len(instances) > 1:
@@ -295,13 +306,8 @@ def main(qty, mode, skipfullstartup):
       print("Complete")
 
     elif mode == 'status':
-      instances = list_instances(project, zone)
-      if instances:
-        print('%s instances in zone %s:' % (project, zone))
-        instancenames = []
-        for instance in instances:
-            print(' - ' + instance['name'])
-            instancenames.append(instance['name'])
+      instancenames = list_instances(project, zone)
+      if instancenames != False:
         cis = functools.partial(check_instance_ssh, project, zone)
         pool = Pool(len(instancenames))
         pool.map(cis, instancenames)
@@ -313,16 +319,16 @@ def main(qty, mode, skipfullstartup):
 
     elif mode == 'make':
       instances = list_instances(project, zone)
-      if instances:
+      if instancenames != False:
         print('%s instances in zone %s:' % (project, zone))
         cmd = 'gcloud --project ' + project + ' compute config-ssh >/dev/null && '
         cmd += 'CCACHE_PREFIX=distcc DISTCC_HOSTS="'
-        for instance in instances:
-            print(' - ' + instance['name'])
-            cmd += '@' + instance['name'] + '.' + zone + '.' + project + \
+        for instancename in instancenames:
+            print(' - ' + instance)
+            cmd += '@' + instance + '.' + zone + '.' + project + \
                    '/' + settings['mthreads']  + ',lzo --randomize '
         # Recommendation is to use 2x for j as actual cores
-        cmd += '" make -j' + str(len(instances)*settings['mthreads']*2)
+        cmd += '" make -j' + str(len(instancenames)*settings['mthreads']*2)
         #print cmd
         os.system(cmd) 
       else:
@@ -332,13 +338,8 @@ def main(qty, mode, skipfullstartup):
 
     elif mode == 'stop':
       print('Deleting instance(s), this may take a few momments.')
-      instances = list_instances(project, zone)
-      if instances:
-        print('%s instances in zone %s:' % (project, zone))
-        instancenames = []
-        for instance in instances:
-            print(' - ' + instance['name'])
-            instancenames.append(instance['name'])
+      instancenames = list_instances(project, zone)
+      if instancenames != False:
         di = functools.partial(delete_instance, project, zone)
         pool = Pool(len(instancenames))
         pool.map(di, instancenames)
@@ -375,6 +376,11 @@ if __name__ == '__main__':
         help='Skip waiting for full instance startup during start')
     parser.set_defaults(skipfullstartup=False)
     parser.add_argument(
+        '--globalinstances',
+        dest='globalinstances', action='store_true',
+        help='Use all discovered instances for this prefix and distro, not just ones started by the local hosts')
+    parser.set_defaults(globalinstances=False)
+    parser.add_argument(
         '--version',
         action='version',
         version='%(prog)s 0.9-dev')
@@ -384,6 +390,9 @@ if __name__ == '__main__':
     # Set the settings file location globally
     global settingFile 
     settingsFile = args.settingsfile
+
+    global globalinstances
+    globalinstances = args.globalinstances
 
     # Sanity check for qty - limited to 8 during testing
     if 0 > args.qty or args.qty > 8:

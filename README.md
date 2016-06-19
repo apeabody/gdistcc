@@ -76,7 +76,7 @@ Gdistcc is designed to be stateless, however there is a minimal configuraiton fi
 
 ```
 usage: gdistcc [-h] [--settingsfile SETTINGSFILE] [--qty QTY]
-               [--skipfullstartup] [--version]
+               [--skipfullstartup] [--globalinstances] [--version]
                mode
 
 positional arguments:
@@ -91,6 +91,8 @@ optional arguments:
   --qty QTY             Qty of Instances to deploy during start mode.
                         (default: 8)
   --skipfullstartup     Skip waiting for full instance startup during start
+  --globalinstances     Use all discovered instances for this prefix and
+                        distro, not just ones started by the local hosts
   --version             show program's version number and exit
 
 Copyright 2016 Andrew Peabody. See README.md for details.
@@ -150,7 +152,6 @@ NOTE: In some cases I've found the ControlMaster mux to be unreliable with multi
 - Gdistcc uses [preememptible instances](https://cloud.google.com/compute/docs/instances/preemptible) which offer preferred pricing, but Google may shutdown on short notice.  Gdistcc does not currently have a way to check if they have been shutdown, however a `gdistcc status` will fail if this is the case.  In the future `gdistcc status` will be able to check if they have been prempted.  In any event, `gdistcc stop` currently can/should be used as normal to shutdown/delete the instances.  One "advantage" of preemptible instances is they won't run more than 24hr, reducing the risk of forgotten instances.
 - Future versions may not require ccache.
 - Only SSH is supported at the transport for distcc.  Distcc's native TCP transport is not enabled due to [security concerns](https://www.cvedetails.com/cve/2004-2687).
-- If used on multiple head machines with different distrs and the same google compute engine account, currently the project and/or zone will need to be manually diffed in settings.json.  In the future gdistcc will pick compatible instances nodes based on prefix and distro.
 - Gdistcc does NOT currently use distcc's Pump Mode for the following reasons:
   - Gdistcc is intended for frequent re-compiles, so most header pre-processing will hopefully be cached by ccache anyway - mutally exclusive from pump mode.
   - Gdistcc uses ssh over the internet for transfers, so minimizing the transfered file size is advantageous. (In a local/HPC setup distcc can be used over TCP for higher transfer speeds.)
