@@ -4,6 +4,8 @@ See:
 https://github.com/apeabody/gdistcc
 """
 
+import pypandoc
+
 # Always prefer setuptools over distutils
 from setuptools import setup, find_packages
 # To use a consistent encoding
@@ -25,7 +27,7 @@ setup(
     version='0.9',
 
     description='gdistcc: the easy way to compile in the cloud!',
-    long_description=long_description,
+    long_description=pypandoc.convert('README.md', 'rst'),
 
     # The project's main homepage.
     url='https://github.com/apeabody/gdistcc',
@@ -43,14 +45,14 @@ setup(
         #   3 - Alpha
         #   4 - Beta
         #   5 - Production/Stable
-        'Development Status :: 4 - Beta',
+        'Development Status :: 3 - Alpha',
 
         # Indicate who your project is intended for
         'Intended Audience :: Developers',
         'Topic :: Software Development :: Build Tools',
 
         # Pick your license as you wish (should match "license" above)
-        'License :: OSI Approved :: Apache License',
+        'License :: OSI Approved :: Apache Software License',
 
         # Specify the Python versions you support here. In particular, ensure
         # that you indicate whether you support Python 2, Python 3 or both.
