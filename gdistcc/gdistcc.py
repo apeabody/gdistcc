@@ -58,7 +58,7 @@ def wait_operation(operation):
 
 
 # [START list_instances]
-def list_instances(project, zone):
+def list_instances(project, zone, globalinstances, distro, includeterm):
 
     # NOT thread safe
     credentials = GoogleCredentials.get_application_default()
@@ -74,7 +74,7 @@ def list_instances(project, zone):
         for instance in result['items']:
             if name in instance['name']:
                 print(' - ' + instance['name'] + ' - ' + instance['status'])
-                if (instance['status'] == 'RUNNING'): 
+                if (instance['status'] == 'RUNNING' or includeterm): 
                     instancenames.append(instance['name'])
         return instancenames if (len(instancenames) > 0) else False
     return False
@@ -82,7 +82,7 @@ def list_instances(project, zone):
 
 
 # [START check_gceproject]
-def check_gceproject(distro):
+def check_gceproject(distro, settingsFile):
     with open(settingsFile) as distros_file:
       distros = json.load(distros_file)['distros']
 
@@ -95,7 +95,7 @@ def check_gceproject(distro):
 
 
 # [START create_instance]
-def create_instance(project, zone, name, source_disk_image, mtype, number):
+def create_instance(project, zone, name, source_disk_image, mtype, distro, number):
 
     # Unfortunatly this is NOT thread safe
     credentials = GoogleCredentials.get_application_default()
@@ -168,7 +168,6 @@ def create_instance(project, zone, name, source_disk_image, mtype, number):
 
 # [START check_instance]
 def check_instance_ssh(project, zone, name):
-    # Wait for confirmation that the instance is done
     for i in xrange(40):
         
         sys.stdout.write(".")
@@ -178,7 +177,7 @@ def check_instance_ssh(project, zone, name):
                ' --zone ' + zone + \
                ' --project ' + project + \
                ' --command "cat /tmp/gdistcc_ready" | grep GDISTCC_READY || true'
-
+ 
         result = subprocess.check_output(cicmd, shell=True, stderr=open(os.devnull, 'w'))
                 
         if "GDISTCC_READY" in result:
@@ -209,8 +208,7 @@ def delete_instance(project, zone, name):
 
 
 # [START check_distro]
-def check_distro():
-
+def check_distro(settingsFile):
     with open(settingsFile) as distros_file:
       distros = json.load(distros_file)['distros']
 
@@ -239,16 +237,61 @@ def check_gcc():
 # [END check_gcc]
 
 
-# [START run]
-def main(qty, mode, skipfullstartup):
+# [START main]
+def main():
+
+    parser = argparse.ArgumentParser(
+        prog='gdistcc',
+        epilog="Copyright 2016 Andrew Peabody. See README.md for details.",
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument(
+        'mode',
+        choices=['start','status','make','stop'])
+    parser.add_argument(
+        '--settingsfile',
+        default=os.path.dirname(os.path.realpath(__file__)) + '/settings.json',
+        help='Custom settings file. (default: %(default)s)')
+    parser.add_argument(
+        '--qty',
+        type=int,
+        default=8,
+        help='Qty of Instances to deploy during start mode. (default: %(default)s)')
+    parser.add_argument(
+        '--skipfullstartup',
+        dest='skipfullstartup', action='store_true',
+        help='Skip waiting for full instance startup during start')
+    parser.set_defaults(skipfullstartup=False)
+    parser.add_argument(
+        '--globalinstances',
+        dest='globalinstances', action='store_true',
+        help='Use all discovered instances for this prefix and distro, not just ones started by the local hosts')
+    parser.set_defaults(globalinstances=False)
+    parser.add_argument(
+        '--version',
+        action='version',
+        version='%(prog)s 0.9.3')
+
+    args = parser.parse_args()
+
+    # Sanity check for qty - limited to 8 during testing
+    if 0 > args.qty or args.qty > 8:
+        print("ERROR: Invalid qty: %s" % args.qty)
+        exit(-1)
+
+    qty = args.qty
+    mode = args.mode
+    skipfullstartup = args.skipfullstartup
+    globalinstances = args.globalinstances
 
     # Check the local distro version
-    global distro
-    distro = check_distro()
+    distro = check_distro(args.settingsfile)
 
     # Load settings - move to function later
     gcc = check_gcc()
-    with open(settingsFile) as distros_file:
+
+    # Set the settings file location globally
+    with open(args.settingsfile) as distros_file:
       settings = json.load(distros_file)['settings']
     global project
     project = settings['project']
@@ -256,6 +299,7 @@ def main(qty, mode, skipfullstartup):
     zone = settings['zone']
     global prefix
     prefix = settings['prefix']
+    mtype = settings['mtype']
 
     # NOT thread safe
     credentials = GoogleCredentials.get_application_default()
@@ -263,20 +307,18 @@ def main(qty, mode, skipfullstartup):
 
     if mode == 'start':
       # Verify no current instances
-      instances = list_instances(project, zone)
+      instances = list_instances(project, zone, globalinstances, distro, False)
       if instances != False:
         print('ERROR: %s gdistcc instance(s) detected, run \'gdistcc status\' for details' % len(instances))
         exit(-1)
       name = prefix + '-' + distro + '-' + format(str(uuid.getnode())[:8:-1])
 
-      with open(settingsFile) as distros_file:
-        mtype = json.load(distros_file)['settings']['mtype']
       image_response = compute.images().getFromFamily(
-          project=check_gceproject(distro), family=distro).execute()
+          project=check_gceproject(distro, args.settingsfile), family=distro).execute()
       source_disk_image = image_response['selfLink']
 
       print('Creating %s %s instances, this will take a few momments.' % (qty, project))
-      ci = functools.partial(create_instance, project, zone, name, source_disk_image, mtype)
+      ci = functools.partial(create_instance, project, zone, name, source_disk_image, mtype, distro)
       if qty > 1:
         pool = Pool(qty)
         pool.map(ci, xrange(qty))
@@ -288,7 +330,7 @@ def main(qty, mode, skipfullstartup):
         ci('0')
 
     if mode == 'status' or mode == 'start':
-      instancenames = list_instances(project, zone)
+      instancenames = list_instances(project, zone, globalinstances, distro, False)
       if instancenames != False and skipfullstartup == False:
         cis = functools.partial(check_instance_ssh, project, zone)
         pool = Pool(len(instancenames))
@@ -296,11 +338,11 @@ def main(qty, mode, skipfullstartup):
         pool.close()
         pool.join()
       else:
-        print('No %s instances found in zone %s' % (project, zone))
+        print('No %s running instances found in zone %s' % (project, zone))
       print("Complete")
 
     elif mode == 'make':
-      instancenames = list_instances(project, zone)
+      instancenames = list_instances(project, zone, globalinstances, distro, False)
       if instancenames != False:
         cmd = 'gcloud --project ' + project + ' compute config-ssh &>/dev/null && '
         cmd += 'CCACHE_PREFIX=distcc DISTCC_HOSTS="'
@@ -319,7 +361,7 @@ def main(qty, mode, skipfullstartup):
 
     if mode == 'stop':
       print('Deleting instance(s), this may take a few momments.')
-      instancenames = list_instances(project, zone)
+      instancenames = list_instances(project, zone, globalinstances, distro, True)
       if instancenames != False:
         di = functools.partial(delete_instance, project, zone)
         pool = Pool(len(instancenames))
@@ -329,54 +371,8 @@ def main(qty, mode, skipfullstartup):
       else:
         print('No %s instances found in zone %s' % (project, zone))
       print('\n' + "Complete")
-
+# [END main]
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        prog='gdistcc',
-        epilog="Copyright 2016 Andrew Peabody. See README.md for details.",
-        description=__doc__,
-        formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument(
-        'mode', 
-        choices=['start','status','make','stop'])
-    parser.add_argument(
-        '--settingsfile',
-        default=os.path.dirname(os.path.realpath(__file__)) + '/settings.json',
-        help='Custom settings file. (default: %(default)s)')
-    parser.add_argument(
-        '--qty', 
-        type=int,
-        default=8, 
-        help='Qty of Instances to deploy during start mode. (default: %(default)s)')
-    parser.add_argument(
-        '--skipfullstartup',
-        dest='skipfullstartup', action='store_true',
-        help='Skip waiting for full instance startup during start')
-    parser.set_defaults(skipfullstartup=False)
-    parser.add_argument(
-        '--globalinstances',
-        dest='globalinstances', action='store_true',
-        help='Use all discovered instances for this prefix and distro, not just ones started by the local hosts')
-    parser.set_defaults(globalinstances=False)
-    parser.add_argument(
-        '--version',
-        action='version',
-        version='%(prog)s 0.9-dev')
+    main()
 
-    args = parser.parse_args()
-
-    # Set the settings file location globally
-    global settingFile 
-    settingsFile = args.settingsfile
-
-    global globalinstances
-    globalinstances = args.globalinstances
-
-    # Sanity check for qty - limited to 8 during testing
-    if 0 > args.qty or args.qty > 8:
-        print("ERROR: Invalid qty: %s" % args.qty)
-        exit(-1)
-
-    main(args.qty, args.mode, args.skipfullstartup)
-# [END run]

@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/apeabody/gdistcc.svg?branch=master)](https://travis-ci.org/apeabody/gdistcc)
 [![Dependency Status](https://gemnasium.com/badges/github.com/apeabody/gdistcc.svg)](https://gemnasium.com/github.com/apeabody/gdistcc)
-
+[![PyPI version](https://badge.fury.io/py/gdistcc.svg)](https://badge.fury.io/py/gdistcc)
 
 Gdistcc provides easy access to compiling 'make' based software on Google Compute Engine via [distcc](https://github.com/distcc/distcc) with local caching via [ccache](https://ccache.samba.org/).  The inclusion of ccache provides a local cache of compiled objects, to prevent costly repeat compilation.
 
@@ -66,8 +66,11 @@ NOTE: Your application MUST currently be using 'make' and configured to use [cca
 
   `sudo pip install --upgrade google-api-python-client`
 
-6. Clone the gdistcc repo locally
+6. Install gdistcc
 
+  `sudo pip install gdistcc`
+
+  Alternatively you can clone the full source from github and use the './gdistcc.py' wrapper in place of 'gdistcc' below.
   `git clone https://github.com/apeabody/gdistcc`
 
 ## Using gdistcc
